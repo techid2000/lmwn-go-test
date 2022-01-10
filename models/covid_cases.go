@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"lmwn-go-test/covid-19-summary/logging"
 	"lmwn-go-test/covid-19-summary/types"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -14,13 +17,15 @@ import (
 var ctx = context.Background()
 
 func GetCovidCases() (*types.CovidCases, error) {
+	logger := logging.GetInfoLogger()
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "redis:6379",
+		Addr: os.Getenv("REDIS_URI"),
 	})
 
 	cachedCases, err := rdb.Get(ctx, "covid-cases").Result()
 	if err == redis.Nil {
-		resp, err := http.Get("http://static.wongnai.com/devinterview/covid-cases.json")
+		logger.Println("Cache miss.")
+		resp, err := http.Get(os.Getenv("COVID_CASES_API_URL"))
 		if err != nil {
 			return nil, err
 		}
@@ -30,7 +35,11 @@ func GetCovidCases() (*types.CovidCases, error) {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
 		bodyStr := buf.String()
-		err = rdb.Set(ctx, "covid-cases", bodyStr, 10*time.Second).Err()
+		expire, err := strconv.Atoi(os.Getenv("CACHE_EXPIRATION_SEC"))
+		if err != nil {
+			return nil, err
+		}
+		err = rdb.Set(ctx, "covid-cases", bodyStr, time.Duration(expire)*time.Second).Err()
 		if err != nil {
 			return nil, err
 		}
@@ -43,8 +52,9 @@ func GetCovidCases() (*types.CovidCases, error) {
 		return nil, err
 	}
 
+	logger.Println("Cache hit.")
+
 	cases := new(types.CovidCases)
 	json.Unmarshal([]byte(cachedCases), cases)
-
 	return cases, nil
 }
