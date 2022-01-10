@@ -1,7 +1,8 @@
 version: '3'
 services:
-  covid-19-summary:
+  api:
     build: .
+    env_file: .env
     ports:
       - 8080:8080
   redis:
