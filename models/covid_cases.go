@@ -30,7 +30,7 @@ func GetCovidCases() (*types.CovidCases, error) {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
 		bodyStr := buf.String()
-		err = rdb.Set(ctx, "covid-cases", bodyStr, 10*time.Minute).Err()
+		err = rdb.Set(ctx, "covid-cases", bodyStr, 10*time.Second).Err()
 		if err != nil {
 			return nil, err
 		}
