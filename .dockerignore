@@ -1,4 +1,6 @@
+.env
+.git
+.gitignore
 .dockerignore
 Dockerfile
-.gitignore
 tmp
